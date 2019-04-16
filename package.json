@@ -25,16 +25,15 @@
     "helmet": "3.12.0",
     "http-status": "1.0.1",
     "joi": "10.6.0",
-    "password-hash": "^1.2.2",
-    "jsonwebtoken": "7.1.9",
+    "jsonwebtoken": "^8.5.1",
     "method-override": "^2.3.10",
     "mongoose": "^5.3.16",
-    "morgan": "1.9.0",
-    "winston": "2.4.1",
-    "socket.io": "^2.2.0"
+    "morgan": "^1.9.1",
+    "password-hash": "^1.2.2",
+    "socket.io": "^2.2.0",
+    "winston": "2.4.1"
   },
-  "devDependencies": {
-  },
+  "devDependencies": {},
   "license": "MIT",
   "config": {
     "commitizen": {
