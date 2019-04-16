@@ -2,49 +2,65 @@ const jwt = require('jsonwebtoken');
 const httpStatus = require('http-status');
 const APIError = require('../helpers/APIError');
 const config = require('../../config/config');
-
-// sample user, used for authentication
-const user = {
-  username: 'react',
-  password: 'express'
-};
+const User = require('../models/user.model');
+const passwordHash = require('password-hash');
 
 /**
- * Returns jwt token if valid username and password is provided
- * @param req
- * @param res
- * @param next
- * @returns {*}
+ * Returns jwt token and user data if valid username and password is provided
  */
 function login(req, res, next) {
-  // Ideally you'll fetch this from the db
-  // Idea here was to show how jwt works with simplicity
-  if (req.body.username === user.username && req.body.password === user.password) {
-    const token = jwt.sign({
-      username: user.username
-    }, config.jwtSecret);
-    return res.json({
-      token,
-      username: user.username
-    });
-  }
+	User.findOne({
+		email: req.body.email
+	})
+		.select('+password')
+		.then((user) => {
+			if (!user) {
+				const err = new APIError('Authentication Failed. User could not be found', httpStatus.UNAUTHORIZED, true);
+				return Promise.reject(err);
+			};
 
-  const err = new APIError('Authentication error', httpStatus.UNAUTHORIZED, true);
-  return next(err);
+			if (!passwordHash.verify(req.body.password, user.password)) {
+				const err = new APIError('Authentication Failed. Invalid password', httpStatus.UNAUTHORIZED, true);
+				return Promise.reject(err);
+			};
+
+			const token = jwt.sign({
+				_id: user._id,
+				email: user.email,
+				name: user.name,
+			}, config.jwtSecret);
+
+			res.json({ token, user: user });
+		})
+
+
+	const err = new APIError('Authentication error', httpStatus.UNAUTHORIZED, true);
+	return next(err);
 }
 
 /**
- * This is a protected route. Will return random number only if jwt token is provided in header.
- * @param req
- * @param res
- * @returns {*}
+ * Register new user.
  */
-function getRandomNumber(req, res) {
-  // req.user is assigned by jwt middleware if valid token is provided
-  return res.json({
-    user: req.user,
-    num: Math.random() * 100
-  });
+function signup(req, res, next) {
+	if (req.body.confirmPassword != req.body.password) {
+		let err = new APIError('Password and confirmed password not matched', httpStatus.INTERNAL_SERVER_ERROR, true);
+		return next(err);
+	}
+	let user = new User({
+		email: req.body.email,
+		name: req.body.name,
+		password: passwordHash.generate(req.body.password),
+	});
+	user.save()
+		.then(savedUser => {
+			res.json('Sucessfully registered');
+		})
+		.catch(e => {
+			if (e.errmsg && e.errmsg.indexOf('duplicate key error') != -1) {
+				e = new APIError('Email already registerd', httpStatus.INTERNAL_SERVER_ERROR, true);
+			}
+			return next(e);
+		});
 }
 
-module.exports = { login, getRandomNumber };
+module.exports = { login, signup };
