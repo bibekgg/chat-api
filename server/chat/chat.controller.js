@@ -22,9 +22,10 @@ function sendMessage(req, res, next) {
 		message: req.body.message,
 		isReceived: false
 	});
-
+	var message;
 	chat.save()
 		.then(newChat => {
+			message = newChat.message;
 			res.json('New message received');
 			const serverReply = new Chat({
 				user: newChat.user,
@@ -36,6 +37,7 @@ function sendMessage(req, res, next) {
 		.then(savedServerReply => {
 			// Send server reply to user via socket
 			socketApi.emitMessage(savedServerReply);
+			Chat.checkLastMessage(savedServerReply.user, message);
 		})
 		.catch(e => next(e));
 }
