@@ -5,6 +5,7 @@ const Chat = require('../models/chat.model');
  */
 function getChatHistory(req, res, next) {
 	Chat.find({ user: req.user._id })
+		.populate('user', 'name')
 		.then(chats => {
 			res.json(chats)
 		})

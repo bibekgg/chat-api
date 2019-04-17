@@ -32,10 +32,7 @@ function login(req, res, next) {
 
 			res.json({ token, user: user });
 		})
-
-
-	const err = new APIError('Authentication error', httpStatus.UNAUTHORIZED, true);
-	return next(err);
+		.catch(e => next(e));
 }
 
 /**
