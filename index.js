@@ -4,8 +4,9 @@ const util = require('util');
 // config should be imported before importing any other file
 const config = require('./config/config');
 const app = require('./config/express');
+const socketApi = require('./server/socket/socket');
 
-const debug = require('debug')('express-mongoose-es6-rest-api:index');
+const debug = require('debug')('chat-api:index');
 
 // make bluebird default Promise
 Promise = require('bluebird'); // eslint-disable-line no-global-assign
@@ -31,9 +32,12 @@ if (config.mongooseDebug) {
 // src: https://github.com/mochajs/mocha/issues/1912
 if (!module.parent) {
   // listen on port config.port
-  app.listen(config.port, () => {
+  let server = app.listen(config.port, () => {
     console.info(`server started on port ${config.port} (${config.env})`); // eslint-disable-line no-console
   });
+
+  var io = socketApi.socketApi.io;
+  io.attach(server);
 }
 
 module.exports = app;

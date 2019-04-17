@@ -1,4 +1,5 @@
 const Chat = require('../models/chat.model');
+const socketApi = require('../socket/socket');
 
 /**
  * Get chat history
@@ -30,10 +31,11 @@ function sendMessage(req, res, next) {
 				message: 'Your last message received successfully at ' + newChat.createdAt + '.',
 				isReceived: true
 			})
-			serverReply.save()
-				.then(savedServerReply => {
-					console.log(savedServerReply)
-				})
+			return serverReply.save()
+		})
+		.then(savedServerReply => {
+			// Send server reply to user via socket
+			socketApi.emitMessage(savedServerReply);
 		})
 		.catch(e => next(e));
 }
