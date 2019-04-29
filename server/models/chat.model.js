@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const sendgrid = require('../../config/sendgrid');
 const User = require('./user.model');
+const socketApi = require('../socket/socket');
 
 /**
  * Chat Schema
@@ -44,19 +45,17 @@ ChatSchema.statics = {
 	 * @param {string} user _id of user
 	 * @param {string} message User's last message
 	 */
-	checkLastMessage(user, message) {
-		this.find({ user: user, isReceived: true })
-			.sort({ createdAt: -1 })
-			.limit(2)
-			.then(lastServerMsgs => {
-				if (lastServerMsgs && lastServerMsgs.length == 2) {
-					let difference = new Date(lastServerMsgs[0].createdAt).getTime() - new Date(lastServerMsgs[1].createdAt).getTime();
-					// if the minute difference is more than 2min send email
-					if (difference / 1000 > 120) {
-						this.sendMail(user, message);
+	checkLastMessage(user, messageId) {
+		let timer = setTimeout(() => {
+			this.findOne({ user: user, isReceived: false })
+				.sort({ createdAt: -1 })
+				.then(lastMsg => {
+					if (lastMsg && lastMsg._id.toString() == messageId.toString()) {
+						this.sendMail(user, lastMsg.message);
 					}
-				}
-			})
+				})
+			clearTimeout(timer);
+		}, 1000 * 30)
 	},
 
 	/**
@@ -65,18 +64,26 @@ ChatSchema.statics = {
 	 * @param {string} message User's last message
 	 */
 	sendMail(userId, message) {
-		User.get(userId)
-			.then(user => {
-				let emailData = {
-					from: 'Chat Application<chat@chatapplication.com>',
-					to: user.email,
-					subject: 'New Message',
-					html: 'Your last message was: ' + message
-				}
-				return sendgrid.send(emailData);
-			})
-			.then(response => console.log("Email successfully sent"))
-			.catch(e => console.error(e));
+		console.log('Email sent', message, new Date());
+		const serverReply = {
+			user: userId,
+			message: 'Since you were idle for 30 sec, we have sent you an email. Please check your inbox.',
+			isReceived: true
+		};
+		socketApi.emitMessage(serverReply);
+		
+		// User.get(userId)
+		// 	.then(user => {
+		// 		let emailData = {
+		// 			from: 'Chat Application<chat@chatapplication.com>',
+		// 			to: user.email,
+		// 			subject: 'New Message',
+		// 			html: 'Your last message was: ' + message
+		// 		}
+		// 		return sendgrid.send(emailData);
+		// 	})
+		// 	.then(response => console.log("Email successfully sent"))
+		// 	.catch(e => console.error(e));
 	}
 };
 
